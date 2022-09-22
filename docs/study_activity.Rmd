@@ -1,0 +1,171 @@
+---
+title: "study_activity"
+author: "Javier Patron"
+date: "2022-09-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(here)
+library(skimr)
+library(janitor)
+library(lubridate)
+
+```
+
+
+```{r}
+lobster <- read_csv(here::here("data","Lobster_Abundance_All_Years_20210412.csv"), na = c("-99999", "")) |> 
+  clean_names() |> 
+  uncount(count)
+
+head(lobster)
+skim(lobster)
+names(lobster)
+```
+
+### Create a summary table
+
+```{r}
+
+summary <- lobster |> 
+  group_by(site, year) |> 
+  summarize(count = n(), 
+            mean_lenths = mean(size_mm, na.rm = TRUE))
+
+ggplot(summary, 
+       aes(x = year,
+           y = count)) +
+  geom_line(aes(color=site)) +
+  labs(title = "Lobster Summary",
+       x = "Year",
+       y = "Count") +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    legend.background = element_rect(fill = "gray98", size = 4, colour = "gray92"),
+    axis.ticks = element_line(colour = "gray10", size = 0.5),
+    axis.text.x = element_text(angle=-45, hjust = 0),
+    panel.background = element_rect(fill = "gray91"),
+    panel.grid.major = element_line(colour = "grey70", size = 0.2),
+    panel.grid.minor = element_line(color = "gray88")) +
+  facet_wrap(~site)
+
+```
+
+
+### Find the proportion
+
+```{r}
+legal_lobsters <- lobster |> 
+  filter(year == 2020) |> 
+  mutate(legal = dplyr::case_when(
+              size_mm > 79.76 ~ "Legal",
+              TRUE ~ "Not Legal")) |> 
+   group_by(site, legal) |> 
+  summarize(count = n())
+
+
+ggplot(legal_lobsters, 
+  aes(fill = legal, x= site, y = count)) +
+  geom_col(position = "fill") +
+  labs(title = "Proportion of legal Lobsters",
+       x = "Location",
+       y = "Percentage")+
+   theme(
+    plot.title = element_text(face = "bold", size = 14),
+    legend.text = element_text(face = "italic"),
+    legend.title = element_blank(),
+    axis.ticks = element_line(colour = "white", size = 0.5),
+    axis.text.x = element_text(angle=-45, hjust = 0),
+    axis.text.y = element_text(color = "gray30"),
+    panel.background = element_rect(fill = "gray90"),
+    panel.grid.major.y = element_line(colour = "gray10", size=0.05),
+    panel.grid.major.x = element_line(colour = "gray90"),
+    panel.grid.minor = element_line(color = "gray90")) +
+  scale_y_continuous(labels = function(x) paste0(x*100, "%"))
+  
+```
+
+
+### TASK 3
+#### filter() practice
+```{r}
+filter_a <- lobster |> 
+  filter(site %in% c("IVEE", "CARP", "NAPL"))
+
+filter_b <- lobster[months(lobster$date) %in% month.name[8],]
+
+filter_b2 <- lobster |> 
+  filter(month == 8)
+
+filter_c <- lobster |> 
+  filter(site == "AQUE" | size_mm > 70)
+
+filter_d <- lobster |> 
+  filter(site != "NAPL")
+
+```
+
+### group_by() practice
+
+```{r}
+
+filter_e <- lobster |> 
+  group_by(site) |> 
+  summarise(mean = mean(size_mm, na.rm = TRUE),
+             st = sd(size_mm, na.rm = TRUE))
+
+
+filter_f <- lobster |> 
+  group_by(site,month) |> 
+  summarise(maximum = max(size_mm, na.rm =TRUE))
+```
+
+### Mutate
+
+```{r}
+
+filter_g <- lobster |> 
+  mutate(length_cm = size_mm * 10)
+
+filter_h <- lobster |> 
+  mutate(site = tolower(site))
+
+filter_i <- lobster |> 
+  mutate(area = toString(area))
+```
+
+### Case When
+
+```{r}
+
+filter_j <- lobster |> 
+  mutate(size_bn = case_when(
+    size_mm <= 70 ~"small",
+    size_mm > 70 ~"large"))
+
+
+filter_j2 <- lobster |> 
+  mutate(size_bn =
+           ifelse(size_mm <= 70, "small", "large"))
+
+
+filter_k <- lobster |> 
+  mutate(designation = ifelse(
+    site %in% c("IVEE", "NAPL") , "MPA", "not MPA"))
+
+
+filter_k2 <- lobster |> 
+  mutate(designation = case_when(
+    site %in% c("IVEE", "NAPL") ~ "MPA",
+    site == "AQUE" ~ "aquadevida",
+    TRUE ~ "not MPA"
+  ))
+```
+
+
